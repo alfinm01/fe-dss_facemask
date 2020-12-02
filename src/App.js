@@ -1,7 +1,7 @@
 import React from "react"
-import './App.css'
+import "./App.css"
 // import * as tf from '@tensorflow/tfjs'
-import * as tmImage from '@teachablemachine/image'
+import * as tmImage from "@teachablemachine/image"
 import Container from "@material-ui/core/Container"
 import Grid from "@material-ui/core/Grid"
 import Button from "@material-ui/core/Button"
@@ -10,32 +10,31 @@ import Card from "@material-ui/core/Card"
 import CardActionArea from "@material-ui/core/CardActionArea"
 import CircularProgress from "@material-ui/core/CircularProgress"
 import CardContent from "@material-ui/core/CardContent"
-import CardMedia from "@material-ui/core/CardMedia"
 import List from "@material-ui/core/List"
 import ListItem from "@material-ui/core/ListItem"
 import ListItemIcon from "@material-ui/core/ListItemIcon"
 import ListItemText from "@material-ui/core/ListItemText"
 import axios from "axios"
-import Table from '@material-ui/core/Table'
-import TableBody from '@material-ui/core/TableBody'
-import TableCell from '@material-ui/core/TableCell'
-import TableContainer from '@material-ui/core/TableContainer'
-import TableHead from '@material-ui/core/TableHead'
-import TableRow from '@material-ui/core/TableRow'
-import Paper from '@material-ui/core/Paper'
+import Table from "@material-ui/core/Table"
+import TableBody from "@material-ui/core/TableBody"
+import TableCell from "@material-ui/core/TableCell"
+import TableContainer from "@material-ui/core/TableContainer"
+import TableHead from "@material-ui/core/TableHead"
+import TableRow from "@material-ui/core/TableRow"
+import Paper from "@material-ui/core/Paper"
+import { makeStyles } from "@material-ui/core/styles"
 import API from "./config"
 import Logo from "./logo.png"
-import { makeStyles } from "@material-ui/core/styles"
 
 const useStyles = makeStyles({
   root: {
-    minWidth: 275
+    minWidth: 275,
   },
   media: {
-    height: 140
+    height: 140,
   },
   table: {
-    minWidth: 650
+    minWidth: 650,
   },
 })
 
@@ -52,16 +51,16 @@ function App() {
     total_pengunjung: 0,
     total_pelanggaran: 0,
     total_aman: 0,
-    pelanggaran: []
+    pelanggaran: [],
   })
 
   React.useEffect(() => {
     async function fetchData() {
-      console.log('fetchData called')
+      console.log("fetchData called")
       setLoading(true)
       await axios
         .get(`${API.backend}/api/dashboard/`)
-        .then(response => {
+        .then((response) => {
           if (response.data) {
             setLoading(false)
             setData(response.data)
@@ -71,98 +70,105 @@ function App() {
             alert("Gagal! Ada kesalahan internal")
           }
         })
-        .catch(error => {
+        .catch((error) => {
           console.log(error.response)
           // alert("Gagal!", error, "error")
         })
     }
     fetchData()
-  }, [detecting])/*, [userCookies.id]*/
+  }, [detecting]) /* , [userCookies.id] */
 
   React.useEffect(() => {
     function timeoutLoadingFrame() {
       setTimeout(() => {
         setLoadingFrame(false)
-        console.log('timeout loading frame', loadingFrame)
+        console.log("timeout loading frame", loadingFrame)
       }, 5000)
     }
     timeoutLoadingFrame()
-  }, [loadingFrame]);
+  }, [loadingFrame])
 
   // More API functions here:
   // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
 
   // the link to your model provided by Teachable Machine export panel
-  const URL = API.model;
+  const URL = API.model
 
-  let model, webcam, labelContainer, maxPredictions;
+  let model
+  let webcam
+  let labelContainer
+  let maxPredictions
 
   // Load the image model and setup the webcam
   const initWebcam = async () => {
-    const modelURL = URL + "model.json";
-    const metadataURL = URL + "metadata.json";
+    const modelURL = `${URL}model.json`
+    const metadataURL = `${URL}metadata.json`
 
     // load the model and metadata
     // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
     // or files from your local hard drive
     // Note: the pose library adds "tmImage" object to your window (window.tmImage)
-    model = await tmImage.load(modelURL, metadataURL);
-    maxPredictions = model.getTotalClasses();
+    model = await tmImage.load(modelURL, metadataURL)
+    maxPredictions = model.getTotalClasses()
 
     // Convenience function to setup a webcam
-    const flip = true; // whether to flip the webcam
-    webcam = new tmImage.Webcam(550, 400, flip); // width, height, flip
-    await webcam.setup(); // request access to the webcam
-    await webcam.play();
-    window.requestAnimationFrame(loop);
+    const flip = true // whether to flip the webcam
+    webcam = new tmImage.Webcam(550, 400, flip) // width, height, flip
+    await webcam.setup() // request access to the webcam
+    await webcam.play()
+    window.requestAnimationFrame(loop)
 
-    setCamera(true);
+    setCamera(true)
 
     // append elements to the DOM
-    document.getElementById("webcam-container").appendChild(webcam.canvas);
-    labelContainer = document.getElementById("label-container");
-    for (let i = 0; i < maxPredictions; i++) { // and class labels
-      labelContainer.appendChild(document.createElement("div"));
+    document.getElementById("webcam-container").appendChild(webcam.canvas)
+    labelContainer = document.getElementById("label-container")
+    for (let i = 0; i < maxPredictions; i += 1) {
+      // and class labels
+      labelContainer.appendChild(document.createElement("div"))
     }
   }
 
   const loop = async () => {
-    webcam.update(); // update the webcam frame
-    await predict();
-    window.requestAnimationFrame(loop);
+    webcam.update() // update the webcam frame
+    await predict()
+    window.requestAnimationFrame(loop)
   }
 
   // run the webcam image through the image model
   const predict = async () => {
     // predict can take in an image, video or canvas html element
-    const prediction = await model.predict(webcam.canvas);
+    const prediction = await model.predict(webcam.canvas)
 
-    const maskValue = prediction[0].probability.toFixed(2);
-    const noMaskValue = prediction[1].probability.toFixed(2);
+    const maskValue = prediction[0].probability.toFixed(2)
+    const noMaskValue = prediction[1].probability.toFixed(2)
 
     // console.log(Math.round((parseFloat(maskValue) * 100)));
     // console.log(Math.round((parseFloat(maskValue) * 100) >= 90));
 
-    const classPredictionMask = "Prediksi deteksi masker: " + maskValue;
-    labelContainer.childNodes[0].innerHTML = classPredictionMask;
-    const classPredictionNoMask = "Prediksi deteksi non-masker: " + noMaskValue;
-    labelContainer.childNodes[1].innerHTML = classPredictionNoMask;
+    const classPredictionMask = `Prediksi deteksi masker: ${maskValue}`
+    labelContainer.childNodes[0].innerHTML = classPredictionMask
+    const classPredictionNoMask = `Prediksi deteksi non-masker: ${noMaskValue}`
+    labelContainer.childNodes[1].innerHTML = classPredictionNoMask
 
     // PROSES REKAMAN TIAP 5 DETIK: https://linguinecode.com/post/why-react-setstate-usestate-does-not-update-immediately
     if (!loading) {
       if (!detecting) {
-        console.log('masuk 1')
-        if (Math.round((parseFloat(maskValue) * 100) >= 90)) {
-          console.log('masuk 3')
+        console.log("masuk 1")
+        if (Math.round(parseFloat(maskValue) * 100 >= 90)) {
+          console.log("masuk 3")
           await changeState3()
-        } else if (Math.round((parseFloat(noMaskValue) * 100) >= 90)) {
-          console.log('masuk 4')
+        } else if (Math.round(parseFloat(noMaskValue) * 100 >= 90)) {
+          console.log("masuk 4")
           await changeState4()
         }
       } else {
-        console.log('masuk 2')
-        if (Math.round((parseFloat(maskValue) * 100) < 90) && (Math.round(parseFloat(noMaskValue) * 100) < 90)) {
-          console.log('masuk 5')
+        console.log("masuk 2")
+        if (
+          Math.round(parseFloat(maskValue) * 100 < 90) &&
+          Math.round(parseFloat(noMaskValue) * 100) < 90
+        ) {
+          console.log("masuk 5")
           await changeState5()
         }
       }
@@ -182,7 +188,7 @@ function App() {
   const changeState5 = async () => {
     setDetecting(false)
   }
-  
+
   return (
     <div className="App">
       <Container>
@@ -190,8 +196,12 @@ function App() {
           <Grid item xs={12} md={4}>
             <h1>Kamera 1 - Lokasi Cawang</h1>
           </Grid>
-          <Grid item xs={12} md={8} style={{textAlign: 'right'}}>
-            <h1>{new Date(Date.now()).toLocaleString("ar-EG" /*en-GB*/, {timeZone: "Asia/Jakarta"})}</h1>
+          <Grid item xs={12} md={8} style={{ textAlign: "right" }}>
+            <h1>
+              {new Date(Date.now()).toLocaleString("ar-EG" /* en-GB */, {
+                timeZone: "Asia/Jakarta",
+              })}
+            </h1>
           </Grid>
         </Grid>
         {loading ? (
@@ -206,16 +216,10 @@ function App() {
                 <Card className={classes.root} elevation={3}>
                   <CardActionArea>
                     <CardContent>
-                      <Typography
-                        gutterBottom
-                        variant="h6"
-                      >
+                      <Typography gutterBottom variant="h6">
                         Total Pengunjung
                       </Typography>
-                      <Typography
-                        variant="h4"
-                        color="textSecondary"
-                      >
+                      <Typography variant="h4" color="textSecondary">
                         {data.total_pengunjung}
                       </Typography>
                     </CardContent>
@@ -226,16 +230,10 @@ function App() {
                 <Card className={classes.root} elevation={3}>
                   <CardActionArea>
                     <CardContent>
-                      <Typography
-                        gutterBottom
-                        variant="h6"
-                      >
+                      <Typography gutterBottom variant="h6">
                         Pengunjung Bermasker
                       </Typography>
-                      <Typography
-                        variant="h4"
-                        color="textSecondary"
-                      >
+                      <Typography variant="h4" color="textSecondary">
                         {data.total_aman}
                       </Typography>
                     </CardContent>
@@ -246,16 +244,10 @@ function App() {
                 <Card className={classes.root} elevation={3}>
                   <CardActionArea>
                     <CardContent>
-                      <Typography
-                        gutterBottom
-                        variant="h6"
-                      >
+                      <Typography gutterBottom variant="h6">
                         Pengunjung Tidak Bermasker
                       </Typography>
-                      <Typography
-                        variant="h4"
-                        color="textSecondary"
-                      >
+                      <Typography variant="h4" color="textSecondary">
                         {data.total_pelanggaran}
                       </Typography>
                     </CardContent>
@@ -272,12 +264,12 @@ function App() {
               variant="subtitle1"
               color="textSecondary"
               id="webcam-container"
-            ></Typography>
+            />
             <Typography
               variant="subtitle1"
               color="textSecondary"
               id="label-container"
-            ></Typography>
+            />
             {!camera ? (
               <Button
                 color="inherit"
@@ -302,9 +294,7 @@ function App() {
                     <ListItemIcon>
                       <img src={Logo} alt="Logo" width="36" height="36" />
                     </ListItemIcon>
-                    <ListItemText
-                      primary="Aman"
-                    />
+                    <ListItemText primary="Aman" />
                   </ListItem>
                 ) : (
                   <>
@@ -312,17 +302,13 @@ function App() {
                       <ListItemIcon>
                         <img src={Logo} alt="Logo" width="36" height="36" />
                       </ListItemIcon>
-                      <ListItemText
-                        primary="Tidak Aman 1"
-                      />
+                      <ListItemText primary="Tidak Aman 1" />
                     </ListItem>
                     <ListItem button>
                       <ListItemIcon>
                         <img src={Logo} alt="Logo" width="36" height="36" />
                       </ListItemIcon>
-                      <ListItemText
-                        primary="Tidak Aman 2"
-                      />
+                      <ListItemText primary="Tidak Aman 2" />
                     </ListItem>
                   </>
                 )}
@@ -361,7 +347,7 @@ function App() {
         </Grid>
       </Container>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
