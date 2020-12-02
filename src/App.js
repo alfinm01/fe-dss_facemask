@@ -8,6 +8,7 @@ import Button from "@material-ui/core/Button"
 import Typography from "@material-ui/core/Typography"
 import Card from "@material-ui/core/Card"
 import CardActionArea from "@material-ui/core/CardActionArea"
+import CircularProgress from "@material-ui/core/CircularProgress"
 import CardContent from "@material-ui/core/CardContent"
 import CardMedia from "@material-ui/core/CardMedia"
 import List from "@material-ui/core/List"
@@ -34,45 +35,65 @@ const useStyles = makeStyles({
     height: 140
   },
   table: {
-    minWidth: 650,
+    minWidth: 650
   },
 })
-
-function createData(name, calories, fat, carbs, protein) {
-  return { name, calories, fat, carbs, protein };
-}
-
-const rows = [
-  createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-  createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-  createData('Eclair', 262, 16.0, 24, 6.0),
-  createData('Cupcake', 305, 3.7, 67, 4.3),
-  createData('Gingerbread', 356, 16.0, 49, 3.9),
-];
 
 function App() {
   const classes = useStyles()
 
-  const [state, setState] = React.useState({
-    detecting: false,
-    loading: false
+  const [loading, setLoading] = React.useState(true)
+  const [loadingFrame, setLoadingFrame] = React.useState(true)
+  const [mask, setMask] = React.useState(false)
+  const [detecting, setDetecting] = React.useState(false)
+  const [isSafe, setIsSafe] = React.useState(false)
+  const [camera, setCamera] = React.useState(false)
+  const [data, setData] = React.useState({
+    total_pengunjung: 0,
+    total_pelanggaran: 0,
+    total_aman: 0,
+    pelanggaran: []
   })
-  const [data, setData] = React.useState(['Rekomendasi 1', 'Rekomendasi 2'])
-  const [lands, setLands] = React.useState([])
-  const [loadingData, setLoadingData] = React.useState(true)
-  const columns = [
-    { title: "ID Lahan", field: "id" },
-    { title: "Nama", field: "nama" },
-    { title: "Deskripsi", field: "deskripsi" },
-    { title: "Tanaman", field: "tanaman" },
-    { title: "Dibuat pada", field: "created_at" }
-  ]
+
+  React.useEffect(() => {
+    async function fetchData() {
+      console.log('fetchData called')
+      setLoading(true)
+      await axios
+        .get(`${API.backend}/api/dashboard/`)
+        .then(response => {
+          if (response.data) {
+            setLoading(false)
+            setData(response.data)
+          } else {
+            console.log("no data")
+            setLoading(false)
+            alert("Gagal! Ada kesalahan internal")
+          }
+        })
+        .catch(error => {
+          console.log(error.response)
+          // alert("Gagal!", error, "error")
+        })
+    }
+    fetchData()
+  }, [detecting])/*, [userCookies.id]*/
+
+  React.useEffect(() => {
+    function timeoutLoadingFrame() {
+      setTimeout(() => {
+        setLoadingFrame(false)
+        console.log('timeout loading frame', loadingFrame)
+      }, 5000)
+    }
+    timeoutLoadingFrame()
+  }, [loadingFrame]);
 
   // More API functions here:
   // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
 
   // the link to your model provided by Teachable Machine export panel
-  const URL = "https://teachablemachine.withgoogle.com/models/yjkTEIhZk/";
+  const URL = API.model;
 
   let model, webcam, labelContainer, maxPredictions;
 
@@ -90,10 +111,12 @@ function App() {
 
     // Convenience function to setup a webcam
     const flip = true; // whether to flip the webcam
-    webcam = new tmImage.Webcam(600, 400, flip); // width, height, flip
+    webcam = new tmImage.Webcam(550, 400, flip); // width, height, flip
     await webcam.setup(); // request access to the webcam
     await webcam.play();
     window.requestAnimationFrame(loop);
+
+    setCamera(true);
 
     // append elements to the DOM
     document.getElementById("webcam-container").appendChild(webcam.canvas);
@@ -103,34 +126,79 @@ function App() {
     }
   }
 
-  async function loop() {
+  const loop = async () => {
     webcam.update(); // update the webcam frame
     await predict();
     window.requestAnimationFrame(loop);
   }
 
   // run the webcam image through the image model
-  async function predict() {
+  const predict = async () => {
     // predict can take in an image, video or canvas html element
     const prediction = await model.predict(webcam.canvas);
-    for (let i = 0; i < maxPredictions; i++) {
-      const classPrediction =
-        prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-      labelContainer.childNodes[i].innerHTML = classPrediction;
+
+    const maskValue = prediction[0].probability.toFixed(2);
+    const noMaskValue = prediction[1].probability.toFixed(2);
+
+    // console.log(Math.round((parseFloat(maskValue) * 100)));
+    // console.log(Math.round((parseFloat(maskValue) * 100) >= 90));
+
+    const classPredictionMask = "Prediksi deteksi masker: " + maskValue;
+    labelContainer.childNodes[0].innerHTML = classPredictionMask;
+    const classPredictionNoMask = "Prediksi deteksi non-masker: " + noMaskValue;
+    labelContainer.childNodes[1].innerHTML = classPredictionNoMask;
+
+    // PROSES REKAMAN TIAP 5 DETIK: https://linguinecode.com/post/why-react-setstate-usestate-does-not-update-immediately
+    if (!loading) {
+      if (!detecting) {
+        console.log('masuk 1')
+        if (Math.round((parseFloat(maskValue) * 100) >= 90)) {
+          console.log('masuk 3')
+          await changeState3()
+        } else if (Math.round((parseFloat(noMaskValue) * 100) >= 90)) {
+          console.log('masuk 4')
+          await changeState4()
+        }
+      } else {
+        console.log('masuk 2')
+        if (Math.round((parseFloat(maskValue) * 100) < 90) && (Math.round(parseFloat(noMaskValue) * 100) < 90)) {
+          console.log('masuk 5')
+          await changeState5()
+        }
+      }
     }
+  }
+
+  const changeState3 = async () => {
+    setMask(true)
+    setDetecting(true)
+  }
+
+  const changeState4 = async () => {
+    setMask(false)
+    setDetecting(true)
+  }
+
+  const changeState5 = async () => {
+    setDetecting(false)
   }
   
   return (
     <div className="App">
       <Container>
-        <Grid container spacing={3} justify="center">
+        <Grid container spacing={3} justify="center" my={10}>
           <Grid item xs={12} md={4}>
-            <h1>Kamera A - Lokasi X</h1>
+            <h1>Kamera 1 - Lokasi Cawang</h1>
           </Grid>
           <Grid item xs={12} md={8} style={{textAlign: 'right'}}>
-            <h1>{new Date(Date.now()).toLocaleString("en-US", {timeZone: "Asia/Jakarta"})}</h1>
+            <h1>{new Date(Date.now()).toLocaleString("ar-EG" /*en-GB*/, {timeZone: "Asia/Jakarta"})}</h1>
           </Grid>
         </Grid>
+        {loading ? (
+          <CircularProgress style={{ marginTop: 5, marginBottom: 5 }} />
+        ) : (
+          <span />
+        )}
         <Grid container spacing={3} justify="center">
           <Grid item xs={12}>
             <Grid container spacing={3} justify="center" alignItems="center">
@@ -147,9 +215,8 @@ function App() {
                       <Typography
                         variant="h4"
                         color="textSecondary"
-                        fullWidth
                       >
-                        520
+                        {data.total_pengunjung}
                       </Typography>
                     </CardContent>
                   </CardActionArea>
@@ -169,7 +236,7 @@ function App() {
                         variant="h4"
                         color="textSecondary"
                       >
-                        420
+                        {data.total_aman}
                       </Typography>
                     </CardContent>
                   </CardActionArea>
@@ -189,7 +256,7 @@ function App() {
                         variant="h4"
                         color="textSecondary"
                       >
-                        100
+                        {data.total_pelanggaran}
                       </Typography>
                     </CardContent>
                   </CardActionArea>
@@ -200,18 +267,29 @@ function App() {
         </Grid>
         <Grid container spacing={3} justify="center">
           <Grid item xs={12} md={6}>
-            <h2>Asumsi selalu ada orang hehe</h2>
-            <div id="webcam-container"></div>
-            <div id="label-container"></div>
-            <Button
-              color="inherit"
-              variant="outlined"
-              fullWidth
-              style={{ textTransform: "none" }}
-              onClick={initWebcam}
-            >
-              Nyalakan Kamera
-            </Button>
+            <h2>Pemantauan Real-Time</h2>
+            <Typography
+              variant="subtitle1"
+              color="textSecondary"
+              id="webcam-container"
+            ></Typography>
+            <Typography
+              variant="subtitle1"
+              color="textSecondary"
+              id="label-container"
+            ></Typography>
+            {!camera ? (
+              <Button
+                color="inherit"
+                variant="outlined"
+                style={{ textTransform: "none" }}
+                onClick={initWebcam}
+              >
+                Nyalakan Kamera
+              </Button>
+            ) : (
+              <span />
+            )}
           </Grid>
           <Grid item xs={12} md={6}>
             <Grid item xs={12}>
@@ -219,16 +297,35 @@ function App() {
             </Grid>
             <Grid container spacing={3} item xs={12}>
               <List component="nav" aria-label="main mailbox folders">
-                {data.map(item => (
+                {isSafe ? (
                   <ListItem button>
                     <ListItemIcon>
                       <img src={Logo} alt="Logo" width="36" height="36" />
                     </ListItemIcon>
                     <ListItemText
-                      primary={item.replace(".", ",")}
+                      primary="Aman"
                     />
                   </ListItem>
-                ))}
+                ) : (
+                  <>
+                    <ListItem button>
+                      <ListItemIcon>
+                        <img src={Logo} alt="Logo" width="36" height="36" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary="Tidak Aman 1"
+                      />
+                    </ListItem>
+                    <ListItem button>
+                      <ListItemIcon>
+                        <img src={Logo} alt="Logo" width="36" height="36" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary="Tidak Aman 2"
+                      />
+                    </ListItem>
+                  </>
+                )}
               </List>
             </Grid>
           </Grid>
@@ -237,35 +334,29 @@ function App() {
           <Grid item xs={12}>
             <h2>Detail Pengunjung Tidak Bermasker</h2>
           </Grid>
-          <Grid container item spacing={3} xs={12}>
-            <Grid item xs={12}>
-              <TableContainer component={Paper}>
-                <Table className={classes.table} aria-label="simple table">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Dessert (100g serving)</TableCell>
-                      <TableCell align="right">Calories</TableCell>
-                      <TableCell align="right">Fat&nbsp;(g)</TableCell>
-                      <TableCell align="right">Carbs&nbsp;(g)</TableCell>
-                      <TableCell align="right">Protein&nbsp;(g)</TableCell>
+          <Grid item xs={12} md={8}>
+            <TableContainer component={Paper}>
+              <Table className={classes.table} aria-label="simple table">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Kamera</TableCell>
+                    <TableCell>Lokasi</TableCell>
+                    <TableCell>Waktu</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.pelanggaran.map((row) => (
+                    <TableRow key={row.waktu}>
+                      <TableCell component="th" scope="row">
+                        {row.kamera}
+                      </TableCell>
+                      <TableCell>{row.lokasi}</TableCell>
+                      <TableCell>{row.waktu}</TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rows.map((row) => (
-                      <TableRow key={row.name}>
-                        <TableCell component="th" scope="row">
-                          {row.name}
-                        </TableCell>
-                        <TableCell align="right">{row.calories}</TableCell>
-                        <TableCell align="right">{row.fat}</TableCell>
-                        <TableCell align="right">{row.carbs}</TableCell>
-                        <TableCell align="right">{row.protein}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Grid>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Grid>
         </Grid>
       </Container>

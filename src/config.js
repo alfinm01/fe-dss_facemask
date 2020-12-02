@@ -1,5 +1,6 @@
 const API = {
-    backend: "https://be-dss_facemask.herokuapp.com"
+    backend: "https://be-dss-facemask.herokuapp.com",
+    model: "https://teachablemachine.withgoogle.com/models/yjkTEIhZk/",
 }
 
 /* const API = {
