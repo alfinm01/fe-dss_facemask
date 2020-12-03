@@ -219,16 +219,20 @@ function App() {
   const showRecommendations = () => {
     const component = []
     const recommendations = {
-      safe: ["Rekomendasi aman 1", "Rekomendasi aman 2", "Rekomendasi aman 3"],
+      safe: [
+        "Tetap buka akses masuk yang tersedia dengan pengetatan",
+        "Tetap awasi penggunaan masker agar tidak lengah",
+        "Tetap terapkan jaga jarak untuk menghindari penyebaran virus",
+      ],
       neutral: [
-        "Rekomendasi netral 1",
-        "Rekomendasi netral 2",
-        "Rekomendasi netral 3",
+        "Tutup beberapa akses masuk untuk mengetatkan penjagaan",
+        "Perketat penggunaan masker di kalangan pengunjung",
+        "Pastikan kepatuhan terhadap protokol kesehatan lain di kalangan pengunjung",
       ],
       unsafe: [
-        "Rekomendasi tidak aman 1",
-        "Rekomendasi tidak aman 2",
-        "Rekomendasi tidak aman 3",
+        "Pastikan hanya ada satu akses masuk yang terbuka untuk mengetatkan penjagaan",
+        "Sediakan masker pada pos penjagaan bagi pengunjung yang tidak menggunakan atau tidak membawa",
+        "Kerahkan seluruh tim keamanan untuk menjaga ketertiban akan protokol kesehatan",
       ],
     }
 
