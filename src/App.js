@@ -42,7 +42,6 @@ const useStyles = makeStyles({
 })
 
 // TODO:
-// setIsSafe
 // Loader position -> alternative is to use backdrop, but will overrun the screen
 
 function App() {
@@ -51,8 +50,7 @@ function App() {
   const [loading, setLoading] = React.useState(true)
   const [mask, setMask] = React.useState(false)
   const [detecting, setDetecting] = React.useState(false)
-  // eslint-disable-next-line no-unused-vars
-  const [isSafe, setIsSafe] = React.useState(false)
+  const [condition, setCondition] = React.useState("safe")
   const [camera, setCamera] = React.useState(false)
   const [seeDetails, setSeeDetails] = React.useState(false)
   const [maskValue, setMaskValue] = React.useState("")
@@ -63,6 +61,16 @@ function App() {
     total_aman: 0,
     pelanggaran: [],
   })
+
+  React.useEffect(() => {
+    if (data.total_aman >= Math.round(data.total_pengunjung * 0.8)) {
+      setCondition("safe")
+    } else if (data.total_aman < Math.round(data.total_pengunjung / 2)) {
+      setCondition("unsafe")
+    } else {
+      setCondition("neutral")
+    }
+  }, [data])
 
   React.useEffect(() => {
     async function fetchData() {
@@ -140,8 +148,6 @@ function App() {
         setDetecting(false)
       }
     }
-
-    // set isSafe
   }, [maskValue, noMaskValue])
 
   const showDetails = () => {
@@ -174,16 +180,6 @@ function App() {
             </TableRow>
           )
         }
-        // component.push(
-        //   <TableRow key="table-dst">
-        //     <TableCell>...</TableCell>
-        //     <TableCell component="th" scope="row">
-        //       ...
-        //     </TableCell>
-        //     <TableCell>...</TableCell>
-        //     <TableCell>...</TableCell>
-        //   </TableRow>
-        // )
       }
     } else {
       component.push(
@@ -194,6 +190,36 @@ function App() {
         </TableRow>
       )
     }
+
+    return <>{component}</>
+  }
+
+  const showRecommendations = () => {
+    const component = []
+    const recommendations = {
+      safe: ["Rekomendasi aman 1", "Rekomendasi aman 2", "Rekomendasi aman 3"],
+      neutral: [
+        "Rekomendasi netral 1",
+        "Rekomendasi netral 2",
+        "Rekomendasi netral 3",
+      ],
+      unsafe: [
+        "Rekomendasi tidak aman 1",
+        "Rekomendasi tidak aman 2",
+        "Rekomendasi tidak aman 3",
+      ],
+    }
+
+    recommendations[`${condition}`].map((item) =>
+      component.push(
+        <ListItem button>
+          <ListItemIcon>
+            <img src={Logo} alt="Logo" width="36" height="36" />
+          </ListItemIcon>
+          <ListItemText primary={item} />
+        </ListItem>
+      )
+    )
 
     return <>{component}</>
   }
@@ -353,34 +379,28 @@ function App() {
           </Grid>
           <Grid item xs={12} md={6}>
             <Grid item xs={12}>
-              <h2>Rekomendasi Langkah Terbaik</h2>
+              <h2>
+                Rekomendasi DSS
+                <Typography variant="subtitle1">status: {condition}</Typography>
+              </h2>
             </Grid>
             <Grid container spacing={3} item xs={12}>
-              <List component="nav" aria-label="main mailbox folders">
-                {isSafe ? (
-                  <ListItem button>
-                    <ListItemIcon>
-                      <img src={Logo} alt="Logo" width="36" height="36" />
-                    </ListItemIcon>
-                    <ListItemText primary="Aman" />
-                  </ListItem>
-                ) : (
-                  <>
-                    <ListItem button>
-                      <ListItemIcon>
-                        <img src={Logo} alt="Logo" width="36" height="36" />
-                      </ListItemIcon>
-                      <ListItemText primary="Tidak Aman 1" />
-                    </ListItem>
-                    <ListItem button>
-                      <ListItemIcon>
-                        <img src={Logo} alt="Logo" width="36" height="36" />
-                      </ListItemIcon>
-                      <ListItemText primary="Tidak Aman 2" />
-                    </ListItem>
-                  </>
-                )}
-              </List>
+              <Grid item xs={12}>
+                <List component="nav" aria-label="main mailbox folders">
+                  {showRecommendations()}
+                </List>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Kondisi aman: Lebih dari 80% pengunjung bermasker
+                </Typography>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Kondisi netral: Antara 50-80% pengunjung bermasker
+                </Typography>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Kondisi tidak aman: Kurang dari 50% pengunjung bermasker
+                </Typography>
+              </Grid>
             </Grid>
           </Grid>
         </Grid>
