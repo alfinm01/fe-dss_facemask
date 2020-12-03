@@ -43,8 +43,7 @@ const useStyles = makeStyles({
 
 // TODO:
 // setIsSafe
-// Loader position
-// Truncate detail pengunjung tidak bermasker
+// Loader position -> alternative is to use backdrop, but will overrun the screen
 
 function App() {
   const classes = useStyles()
@@ -55,6 +54,7 @@ function App() {
   // eslint-disable-next-line no-unused-vars
   const [isSafe, setIsSafe] = React.useState(false)
   const [camera, setCamera] = React.useState(false)
+  const [seeDetails, setSeeDetails] = React.useState(false)
   const [maskValue, setMaskValue] = React.useState("")
   const [noMaskValue, setNoMaskValue] = React.useState("")
   const [data, setData] = React.useState({
@@ -123,30 +123,80 @@ function App() {
     if (!loading) {
       console.log({ maskValue, noMaskValue })
       if (!detecting) {
-        console.log("masuk 1")
         if (Math.round(parseFloat(maskValue) * 100) >= 90) {
-          console.log("masuk 3")
+          console.log("mask detected")
           setMask(true)
           setDetecting(true)
         } else if (Math.round(parseFloat(noMaskValue) * 100) >= 90) {
-          console.log("masuk 4")
+          console.log("no mask detected")
           setMask(false)
           setDetecting(true)
         }
-      } else {
-        console.log("masuk 2")
-        if (
-          Math.round(parseFloat(maskValue) * 100) < 90 &&
-          Math.round(parseFloat(noMaskValue) * 100) < 90
-        ) {
-          console.log("masuk 5")
-          setDetecting(false)
-        }
+      } else if (
+        Math.round(parseFloat(maskValue) * 100) < 90 &&
+        Math.round(parseFloat(noMaskValue) * 100) < 90
+      ) {
+        console.log("reset detection")
+        setDetecting(false)
       }
     }
 
     // set isSafe
   }, [maskValue, noMaskValue])
+
+  const showDetails = () => {
+    const component = []
+
+    if (data.pelanggaran.length > 0) {
+      if (seeDetails) {
+        data.pelanggaran.map((row, i) =>
+          component.push(
+            <TableRow key={row.waktu}>
+              <TableCell>{i + 1}</TableCell>
+              <TableCell component="th" scope="row">
+                {row.kamera}
+              </TableCell>
+              <TableCell>{row.lokasi}</TableCell>
+              <TableCell>{row.waktu}</TableCell>
+            </TableRow>
+          )
+        )
+      } else {
+        for (let i = 0; i < 5; i += 1) {
+          component.push(
+            <TableRow key={data.pelanggaran[i].waktu}>
+              <TableCell>{i + 1}</TableCell>
+              <TableCell component="th" scope="row">
+                {data.pelanggaran[i].kamera}
+              </TableCell>
+              <TableCell>{data.pelanggaran[i].lokasi}</TableCell>
+              <TableCell>{data.pelanggaran[i].waktu}</TableCell>
+            </TableRow>
+          )
+        }
+        // component.push(
+        //   <TableRow key="table-dst">
+        //     <TableCell>...</TableCell>
+        //     <TableCell component="th" scope="row">
+        //       ...
+        //     </TableCell>
+        //     <TableCell>...</TableCell>
+        //     <TableCell>...</TableCell>
+        //   </TableRow>
+        // )
+      }
+    } else {
+      component.push(
+        <TableRow key="no data">
+          <TableCell component="th" scope="row">
+            Belum ada data
+          </TableCell>
+        </TableRow>
+      )
+    }
+
+    return <>{component}</>
+  }
 
   // More API functions here:
   // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
@@ -234,7 +284,7 @@ function App() {
                       <Typography gutterBottom variant="h6">
                         Total Pengunjung
                       </Typography>
-                      <Typography variant="h4" color="textSecondary">
+                      <Typography variant="h4" style={{ color: "blue" }}>
                         {data.total_pengunjung}
                       </Typography>
                     </CardContent>
@@ -248,7 +298,7 @@ function App() {
                       <Typography gutterBottom variant="h6">
                         Pengunjung Bermasker
                       </Typography>
-                      <Typography variant="h4" color="textSecondary">
+                      <Typography variant="h4" style={{ color: "green" }}>
                         {data.total_aman}
                       </Typography>
                     </CardContent>
@@ -262,7 +312,7 @@ function App() {
                       <Typography gutterBottom variant="h6">
                         Pengunjung Tidak Bermasker
                       </Typography>
-                      <Typography variant="h4" color="textSecondary">
+                      <Typography variant="h4" style={{ color: "red" }}>
                         {data.total_pelanggaran}
                       </Typography>
                     </CardContent>
@@ -349,28 +399,22 @@ function App() {
                     <TableCell>Waktu</TableCell>
                   </TableRow>
                 </TableHead>
-                <TableBody>
-                  {data.pelanggaran.length > 0 ? (
-                    data.pelanggaran.map((row, i) => (
-                      <TableRow key={row.waktu}>
-                        <TableCell>{i + 1}</TableCell>
-                        <TableCell component="th" scope="row">
-                          {row.kamera}
-                        </TableCell>
-                        <TableCell>{row.lokasi}</TableCell>
-                        <TableCell>{row.waktu}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow key="no data">
-                      <TableCell component="th" scope="row">
-                        Belum ada data
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
+                <TableBody>{showDetails()}</TableBody>
               </Table>
             </TableContainer>
+            <br />
+            {!seeDetails && data.pelanggaran.length > 5 ? (
+              <Button
+                color="inherit"
+                variant="outlined"
+                style={{ textTransform: "none" }}
+                onClick={() => setSeeDetails(true)}
+              >
+                Tampilkan semua data
+              </Button>
+            ) : (
+              <></>
+            )}
           </Grid>
         </Grid>
       </Container>
