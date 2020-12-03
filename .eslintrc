@@ -13,6 +13,8 @@
     "rules": {
         "semi": 0,
         "no-use-before-define": ["error", { "variables": false }],
+        "no-console": "off",
+        "no-alert": "off",
         "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx"] }],
         "prettier/prettier": [
             "error", {
