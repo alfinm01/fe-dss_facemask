@@ -13,6 +13,7 @@ import Paper from "@material-ui/core/Paper"
 import Button from "@material-ui/core/Button"
 import ListItem from "@material-ui/core/ListItem"
 import TableRow from "@material-ui/core/TableRow"
+import Backdrop from "@material-ui/core/Backdrop"
 import Container from "@material-ui/core/Container"
 import TableBody from "@material-ui/core/TableBody"
 import TableCell from "@material-ui/core/TableCell"
@@ -29,7 +30,7 @@ import { makeStyles } from "@material-ui/core/styles"
 import API from "./config"
 import Logo from "./logo.png"
 
-const useStyles = makeStyles({
+const useStyles = makeStyles((theme) => ({
   root: {
     minWidth: 275,
   },
@@ -39,10 +40,15 @@ const useStyles = makeStyles({
   table: {
     minWidth: 650,
   },
-})
+  backdrop: {
+    zIndex: theme.zIndex.drawer + 1,
+  },
+}))
 
 // TODO:
-// Loader position -> alternative is to use backdrop, but will overrun the screen
+// BIG NOTE
+// Mask value (true/false) apparently appears to be opposite, need to fix this next
+// Hotfix: Reversed the value
 
 function App() {
   const classes = useStyles()
@@ -63,13 +69,17 @@ function App() {
   })
 
   React.useEffect(() => {
-    if (data.total_aman >= Math.round(data.total_pengunjung * 0.8)) {
-      setCondition("safe")
-    } else if (data.total_aman < Math.round(data.total_pengunjung / 2)) {
-      setCondition("unsafe")
-    } else {
-      setCondition("neutral")
+    async function calculateCondition() {
+      if (data.total_aman >= Math.round(data.total_pengunjung * 0.8)) {
+        setCondition("safe")
+      } else if (data.total_aman < Math.round(data.total_pengunjung / 2)) {
+        setCondition("unsafe")
+      } else {
+        setCondition("neutral")
+      }
     }
+
+    calculateCondition()
   }, [data])
 
   React.useEffect(() => {
@@ -95,11 +105,15 @@ function App() {
         })
     }
 
+    fetchData()
+  }, [detecting])
+
+  React.useEffect(() => {
     async function sendData() {
       console.log("sendData called")
       setLoading(true)
       const payload = {
-        pelanggaran: mask,
+        pelanggaran: !mask, // THIS
       }
       await axios
         .post(`${API.backend}/api/dashboard/`, payload)
@@ -107,6 +121,7 @@ function App() {
           console.log(response)
           if (response.data && response.data.message) {
             setLoading(false)
+            setDetecting(true)
             console.log(response.data.message)
           } else {
             setLoading(false)
@@ -121,62 +136,72 @@ function App() {
         })
     }
 
-    if (detecting) {
-      sendData()
-    }
-    fetchData()
-  }, [detecting])
+    sendData()
+  }, [mask])
 
   React.useEffect(() => {
-    if (!loading) {
-      console.log({ maskValue, noMaskValue })
-      if (!detecting) {
-        if (Math.round(parseFloat(maskValue) * 100) >= 90) {
-          console.log("mask detected")
-          setMask(true)
-          setDetecting(true)
-        } else if (Math.round(parseFloat(noMaskValue) * 100) >= 90) {
-          console.log("no mask detected")
-          setMask(false)
-          setDetecting(true)
+    async function detectMask() {
+      if (!loading) {
+        console.log({ maskValue, noMaskValue })
+        if (!detecting) {
+          if (Math.round(parseFloat(maskValue) * 100) >= 90) {
+            console.log("mask detected")
+            setMask(true)
+          } else if (Math.round(parseFloat(noMaskValue) * 100) >= 90) {
+            console.log("no mask detected")
+            setMask(false)
+          }
+        } else if (
+          (mask && Math.round(parseFloat(maskValue) * 100) < 90) ||
+          (!mask && Math.round(parseFloat(noMaskValue) * 100) < 90)
+        ) {
+          console.log("reset detection")
+          setDetecting(false)
         }
-      } else if (
-        Math.round(parseFloat(maskValue) * 100) < 90 &&
-        Math.round(parseFloat(noMaskValue) * 100) < 90
-      ) {
-        console.log("reset detection")
-        setDetecting(false)
       }
     }
-  }, [maskValue, noMaskValue])
+
+    detectMask()
+  }, [mask, maskValue, noMaskValue, detecting, loading])
 
   const showDetails = () => {
     const component = []
 
     if (data.pelanggaran.length > 0) {
       if (seeDetails) {
-        data.pelanggaran.map((row, i) =>
-          component.push(
+        data.pelanggaran.map((row, i) => {
+          const parsedTime =
+            parseInt(data.pelanggaran[i].waktu.slice(0, 2), 10) + 7
+          return component.push(
             <TableRow key={row.waktu}>
               <TableCell>{i + 1}</TableCell>
               <TableCell component="th" scope="row">
                 {row.kamera}
               </TableCell>
-              <TableCell>{row.lokasi}</TableCell>
-              <TableCell>{row.waktu}</TableCell>
+              <TableCell>
+                {row.lokasi.slice(0, 1).toUpperCase() + row.lokasi.slice(1)}
+              </TableCell>
+              <TableCell>{parsedTime + row.waktu.slice(2)} WIB</TableCell>
             </TableRow>
           )
-        )
+        })
       } else {
         for (let i = 0; i < 5; i += 1) {
+          const parsedTime =
+            parseInt(data.pelanggaran[i].waktu.slice(0, 2), 10) + 7
           component.push(
             <TableRow key={data.pelanggaran[i].waktu}>
               <TableCell>{i + 1}</TableCell>
               <TableCell component="th" scope="row">
                 {data.pelanggaran[i].kamera}
               </TableCell>
-              <TableCell>{data.pelanggaran[i].lokasi}</TableCell>
-              <TableCell>{data.pelanggaran[i].waktu}</TableCell>
+              <TableCell>
+                {data.pelanggaran[i].lokasi.slice(0, 1).toUpperCase() +
+                  data.pelanggaran[i].lokasi.slice(1)}
+              </TableCell>
+              <TableCell>
+                {parsedTime + data.pelanggaran[i].waktu.slice(2)} WIB
+              </TableCell>
             </TableRow>
           )
         }
@@ -282,6 +307,13 @@ function App() {
 
   return (
     <div className="App">
+      <Backdrop
+        className={classes.backdrop}
+        open={loading}
+        style={{ backgroundColor: "rgba(0,0,0,0)" }}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
       <Container>
         <Grid container spacing={3} justify="center" my={10}>
           <Grid item xs={12} md={4}>
@@ -295,11 +327,6 @@ function App() {
             </h1>
           </Grid>
         </Grid>
-        {loading ? (
-          <CircularProgress style={{ marginTop: 5, marginBottom: 5 }} />
-        ) : (
-          <span />
-        )}
         <Grid container spacing={3} justify="center">
           <Grid item xs={12}>
             <Grid container spacing={3} justify="center" alignItems="center">
