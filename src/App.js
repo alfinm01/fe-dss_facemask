@@ -20,15 +20,12 @@ import TableCell from "@material-ui/core/TableCell"
 import TableHead from "@material-ui/core/TableHead"
 import Typography from "@material-ui/core/Typography"
 import CardContent from "@material-ui/core/CardContent"
-import ListItemIcon from "@material-ui/core/ListItemIcon"
 import ListItemText from "@material-ui/core/ListItemText"
 import TableContainer from "@material-ui/core/TableContainer"
 import CardActionArea from "@material-ui/core/CardActionArea"
 import CircularProgress from "@material-ui/core/CircularProgress"
 import { makeStyles } from "@material-ui/core/styles"
-
 import API from "./config"
-import Logo from "./logo.png"
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -235,13 +232,10 @@ function App() {
       ],
     }
 
-    recommendations[`${condition}`].map((item) =>
+    recommendations[`${condition}`].map((item, i) =>
       component.push(
         <ListItem button>
-          <ListItemIcon>
-            <img src={Logo} alt="Logo" width="36" height="36" />
-          </ListItemIcon>
-          <ListItemText primary={item} />
+          <ListItemText primary={`${i + 1}. ${item}`} />
         </ListItem>
       )
     )
@@ -321,7 +315,7 @@ function App() {
           </Grid>
           <Grid item xs={12} md={8} style={{ textAlign: "right" }}>
             <h1>
-              {new Date(Date.now()).toLocaleString("ar-EG" /* en-GB */, {
+              {new Date(Date.now()).toLocaleString("en-GB", {
                 timeZone: "Asia/Jakarta",
               })}
             </h1>
