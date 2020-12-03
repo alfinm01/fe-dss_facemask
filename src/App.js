@@ -1,28 +1,31 @@
-import React from "react"
 import "./App.css"
+import React from "react"
+import axios from "axios"
+
 // import * as tf from '@tensorflow/tfjs'
 import * as tmImage from "@teachablemachine/image"
-import Container from "@material-ui/core/Container"
+
 import Grid from "@material-ui/core/Grid"
-import Button from "@material-ui/core/Button"
-import Typography from "@material-ui/core/Typography"
 import Card from "@material-ui/core/Card"
-import CardActionArea from "@material-ui/core/CardActionArea"
-import CircularProgress from "@material-ui/core/CircularProgress"
-import CardContent from "@material-ui/core/CardContent"
 import List from "@material-ui/core/List"
-import ListItem from "@material-ui/core/ListItem"
-import ListItemIcon from "@material-ui/core/ListItemIcon"
-import ListItemText from "@material-ui/core/ListItemText"
-import axios from "axios"
 import Table from "@material-ui/core/Table"
+import Paper from "@material-ui/core/Paper"
+import Button from "@material-ui/core/Button"
+import ListItem from "@material-ui/core/ListItem"
+import TableRow from "@material-ui/core/TableRow"
+import Container from "@material-ui/core/Container"
 import TableBody from "@material-ui/core/TableBody"
 import TableCell from "@material-ui/core/TableCell"
-import TableContainer from "@material-ui/core/TableContainer"
 import TableHead from "@material-ui/core/TableHead"
-import TableRow from "@material-ui/core/TableRow"
-import Paper from "@material-ui/core/Paper"
+import Typography from "@material-ui/core/Typography"
+import CardContent from "@material-ui/core/CardContent"
+import ListItemIcon from "@material-ui/core/ListItemIcon"
+import ListItemText from "@material-ui/core/ListItemText"
+import TableContainer from "@material-ui/core/TableContainer"
+import CardActionArea from "@material-ui/core/CardActionArea"
+import CircularProgress from "@material-ui/core/CircularProgress"
 import { makeStyles } from "@material-ui/core/styles"
+
 import API from "./config"
 import Logo from "./logo.png"
 
@@ -38,15 +41,22 @@ const useStyles = makeStyles({
   },
 })
 
+// TODO:
+// setIsSafe
+// Loader position
+// Truncate detail pengunjung tidak bermasker
+
 function App() {
   const classes = useStyles()
 
   const [loading, setLoading] = React.useState(true)
-  const [loadingFrame, setLoadingFrame] = React.useState(true)
   const [mask, setMask] = React.useState(false)
   const [detecting, setDetecting] = React.useState(false)
+  // eslint-disable-next-line no-unused-vars
   const [isSafe, setIsSafe] = React.useState(false)
   const [camera, setCamera] = React.useState(false)
+  const [maskValue, setMaskValue] = React.useState("")
+  const [noMaskValue, setNoMaskValue] = React.useState("")
   const [data, setData] = React.useState({
     total_pengunjung: 0,
     total_pelanggaran: 0,
@@ -71,22 +81,72 @@ function App() {
           }
         })
         .catch((error) => {
+          console.log("error catch")
           console.log(error.response)
-          // alert("Gagal!", error, "error")
+          alert("Gagal! Ada error internal")
         })
     }
+
+    async function sendData() {
+      console.log("sendData called")
+      setLoading(true)
+      const payload = {
+        pelanggaran: mask,
+      }
+      await axios
+        .post(`${API.backend}/api/dashboard/`, payload)
+        .then((response) => {
+          console.log(response)
+          if (response.data && response.data.message) {
+            setLoading(false)
+            console.log(response.data.message)
+          } else {
+            setLoading(false)
+            console.log("error response")
+            alert("Gagal! Ada error internal")
+          }
+        })
+        .catch((error) => {
+          console.log("error catch")
+          console.log(error.response)
+          alert("Gagal! Ada error internal")
+        })
+    }
+
+    if (detecting) {
+      sendData()
+    }
     fetchData()
-  }, [detecting]) /* , [userCookies.id] */
+  }, [detecting])
 
   React.useEffect(() => {
-    function timeoutLoadingFrame() {
-      setTimeout(() => {
-        setLoadingFrame(false)
-        console.log("timeout loading frame", loadingFrame)
-      }, 5000)
+    if (!loading) {
+      console.log({ maskValue, noMaskValue })
+      if (!detecting) {
+        console.log("masuk 1")
+        if (Math.round(parseFloat(maskValue) * 100) >= 90) {
+          console.log("masuk 3")
+          setMask(true)
+          setDetecting(true)
+        } else if (Math.round(parseFloat(noMaskValue) * 100) >= 90) {
+          console.log("masuk 4")
+          setMask(false)
+          setDetecting(true)
+        }
+      } else {
+        console.log("masuk 2")
+        if (
+          Math.round(parseFloat(maskValue) * 100) < 90 &&
+          Math.round(parseFloat(noMaskValue) * 100) < 90
+        ) {
+          console.log("masuk 5")
+          setDetecting(false)
+        }
+      }
     }
-    timeoutLoadingFrame()
-  }, [loadingFrame])
+
+    // set isSafe
+  }, [maskValue, noMaskValue])
 
   // More API functions here:
   // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
@@ -140,53 +200,8 @@ function App() {
     // predict can take in an image, video or canvas html element
     const prediction = await model.predict(webcam.canvas)
 
-    const maskValue = prediction[0].probability.toFixed(2)
-    const noMaskValue = prediction[1].probability.toFixed(2)
-
-    // console.log(Math.round((parseFloat(maskValue) * 100)));
-    // console.log(Math.round((parseFloat(maskValue) * 100) >= 90));
-
-    const classPredictionMask = `Prediksi deteksi masker: ${maskValue}`
-    labelContainer.childNodes[0].innerHTML = classPredictionMask
-    const classPredictionNoMask = `Prediksi deteksi non-masker: ${noMaskValue}`
-    labelContainer.childNodes[1].innerHTML = classPredictionNoMask
-
-    // PROSES REKAMAN TIAP 5 DETIK: https://linguinecode.com/post/why-react-setstate-usestate-does-not-update-immediately
-    if (!loading) {
-      if (!detecting) {
-        console.log("masuk 1")
-        if (Math.round(parseFloat(maskValue) * 100 >= 90)) {
-          console.log("masuk 3")
-          await changeState3()
-        } else if (Math.round(parseFloat(noMaskValue) * 100 >= 90)) {
-          console.log("masuk 4")
-          await changeState4()
-        }
-      } else {
-        console.log("masuk 2")
-        if (
-          Math.round(parseFloat(maskValue) * 100 < 90) &&
-          Math.round(parseFloat(noMaskValue) * 100) < 90
-        ) {
-          console.log("masuk 5")
-          await changeState5()
-        }
-      }
-    }
-  }
-
-  const changeState3 = async () => {
-    setMask(true)
-    setDetecting(true)
-  }
-
-  const changeState4 = async () => {
-    setMask(false)
-    setDetecting(true)
-  }
-
-  const changeState5 = async () => {
-    setDetecting(false)
+    setMaskValue(prediction[0].probability.toFixed(2))
+    setNoMaskValue(prediction[1].probability.toFixed(2))
   }
 
   return (
@@ -265,11 +280,6 @@ function App() {
               color="textSecondary"
               id="webcam-container"
             />
-            <Typography
-              variant="subtitle1"
-              color="textSecondary"
-              id="label-container"
-            />
             {!camera ? (
               <Button
                 color="inherit"
@@ -280,7 +290,15 @@ function App() {
                 Nyalakan Kamera
               </Button>
             ) : (
-              <span />
+              <Typography
+                variant="subtitle1"
+                color="textSecondary"
+                id="label-container"
+              >
+                Prediksi deteksi masker: {maskValue}
+                <br />
+                Prediksi deteksi non-masker: {noMaskValue}
+              </Typography>
             )}
           </Grid>
           <Grid item xs={12} md={6}>
@@ -325,21 +343,31 @@ function App() {
               <Table className={classes.table} aria-label="simple table">
                 <TableHead>
                   <TableRow>
+                    <TableCell>No</TableCell>
                     <TableCell>Kamera</TableCell>
                     <TableCell>Lokasi</TableCell>
                     <TableCell>Waktu</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.pelanggaran.map((row) => (
-                    <TableRow key={row.waktu}>
+                  {data.pelanggaran.length > 0 ? (
+                    data.pelanggaran.map((row, i) => (
+                      <TableRow key={row.waktu}>
+                        <TableCell>{i + 1}</TableCell>
+                        <TableCell component="th" scope="row">
+                          {row.kamera}
+                        </TableCell>
+                        <TableCell>{row.lokasi}</TableCell>
+                        <TableCell>{row.waktu}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow key="no data">
                       <TableCell component="th" scope="row">
-                        {row.kamera}
+                        Belum ada data
                       </TableCell>
-                      <TableCell>{row.lokasi}</TableCell>
-                      <TableCell>{row.waktu}</TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>

@@ -12,6 +12,7 @@
     ],
     "rules": {
         "semi": 0,
+        "no-use-before-define": ["error", { "variables": false }],
         "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx"] }],
         "prettier/prettier": [
             "error", {
