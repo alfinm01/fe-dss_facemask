@@ -49,6 +49,11 @@ const useStyles = makeStyles((theme) => ({
 
 function App() {
   const classes = useStyles()
+  const conditionNames = {
+    unsafe: "tidak aman",
+    neutral: "netral",
+    safe: "aman",
+  }
 
   const [loading, setLoading] = React.useState(true)
   const [mask, setMask] = React.useState(false)
@@ -407,7 +412,9 @@ function App() {
             <Grid item xs={12}>
               <h2>
                 Rekomendasi DSS
-                <Typography variant="subtitle1">status: {condition}</Typography>
+                <Typography variant="subtitle1">
+                  status: {conditionNames[`${condition}`]}
+                </Typography>
               </h2>
             </Grid>
             <Grid container spacing={3} item xs={12}>
