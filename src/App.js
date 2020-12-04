@@ -173,7 +173,7 @@ function App() {
       if (seeDetails) {
         data.pelanggaran.map((row, i) => {
           const parsedTime =
-            parseInt(data.pelanggaran[i].waktu.slice(0, 2), 10) + 7
+            (parseInt(data.pelanggaran[i].waktu.slice(0, 2), 10) + 7) % 24
           return component.push(
             <TableRow key={row.waktu}>
               <TableCell>{i + 1}</TableCell>
@@ -191,7 +191,7 @@ function App() {
         const n = data.pelanggaran.length > 5 ? 5 : data.pelanggaran.length
         for (let i = 0; i < n; i += 1) {
           const parsedTime =
-            parseInt(data.pelanggaran[i].waktu.slice(0, 2), 10) + 7
+            (parseInt(data.pelanggaran[i].waktu.slice(0, 2), 10) + 7) % 24
           component.push(
             <TableRow key={data.pelanggaran[i].waktu}>
               <TableCell>{i + 1}</TableCell>
