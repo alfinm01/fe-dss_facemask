@@ -183,7 +183,8 @@ function App() {
           )
         })
       } else {
-        for (let i = 0; i < 5; i += 1) {
+        const n = data.pelanggaran.length > 5 ? 5 : data.pelanggaran.length
+        for (let i = 0; i < n; i += 1) {
           const parsedTime =
             parseInt(data.pelanggaran[i].waktu.slice(0, 2), 10) + 7
           component.push(
@@ -238,7 +239,7 @@ function App() {
 
     recommendations[`${condition}`].map((item, i) =>
       component.push(
-        <ListItem button>
+        <ListItem button key={item}>
           <ListItemText primary={`${i + 1}. ${item}`} />
         </ListItem>
       )
